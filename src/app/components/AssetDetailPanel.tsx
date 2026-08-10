@@ -46,14 +46,31 @@ export function AssetDetailPanel({
   const [pickerOpen, setPickerOpen] = useState(false);
   const isMobile = useIsMobile();
 
-  // Desktop has no panel-without-canvas state: opening a card opens both halves
-  // of one screen, so zoom is not a mode you enter, it is where you already are.
-  // Mobile cannot fit them side by side, so it keeps the two-step flow — sheet
-  // first, tap the preview to zoom — and this stays false until that tap.
-  const [isZoomOpen, setIsZoomOpen] = useState(!isMobile);
+  /*
+   * Zoom is a MOBILE-ONLY mode flag.
+   *
+   * Mobile cannot fit the stage and the sheet side by side, so it keeps the
+   * two-step flow: sheet first, tap the preview to zoom. This stays false until
+   * that tap.
+   *
+   * Desktop is not a mode at all — opening a card opens both halves of one
+   * screen, so `showCanvas` below is unconditional there rather than reading
+   * this flag. It used to be seeded from `!isMobile` and shared by both
+   * layouts, which meant anything that set it back to false while the panel
+   * stayed open (the docked stage answering Esc on its own) dropped the desktop
+   * screen into a half-state the design has no drawing for: the canvas gone,
+   * and the panel widened back to a slab flush against the viewport edge with
+   * the 12px gutter and its rounded corners lost.
+   */
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
   useEffect(() => {
-    setIsZoomOpen(!isMobile);
+    if (!isMobile) setIsZoomOpen(false);
   }, [isMobile]);
+
+  /** Desktop always docks the stage beside the panel; mobile never does. */
+  const showCanvas = !isMobile;
+  /** Both layouts that float the panel over a dimmed page rather than slab it. */
+  const isFloating = showCanvas || isZoomOpen;
   const { unlocked } = useSuperuser();
 
   // Swipe-down-to-dismiss, mobile only.
@@ -197,17 +214,20 @@ export function AssetDetailPanel({
          width, and the panel beside it at 320px rather than on top of it. */
       className={cn(
         "fixed inset-0 z-50 flex items-end justify-center lg:items-stretch lg:justify-end",
-        isZoomOpen ? "bg-black/80 lg:gap-4 lg:p-3" : "bg-black/50"
+        isFloating ? "bg-black/80 lg:gap-4 lg:p-3" : "bg-black/50"
       )}
       onClick={onClose}
     >
-      {isZoomOpen && !isMobile && (
+      {showCanvas && (
         <ImageZoomModal
           src={asset.url_lightroom}
           alt={asset.asset_name}
           caption={displayName}
           isOpen
-          onClose={() => setIsZoomOpen(false)}
+          // Closes the whole screen, not just the stage. On desktop the canvas
+          // is not a layer you can back out of, and leaving the panel behind on
+          // its own is the half-state described above.
+          onClose={onClose}
           variant="docked"
           className="hidden min-w-0 flex-1 lg:block"
         />
@@ -229,7 +249,7 @@ export function AssetDetailPanel({
           "asset-detail-panel flex h-[85dvh] w-full flex-col overflow-hidden rounded-t-[16px] bg-card shadow-xl animate-in slide-in-from-bottom duration-300 lg:h-full lg:rounded-none lg:slide-in-from-bottom-0 lg:slide-in-from-right-0 lg:duration-300",
           // Zoomed, the panel narrows to 320 and rounds off, because it is now a
           // card floating in the overlay rather than a slab against the edge.
-          isZoomOpen
+          isFloating
             ? "lg:w-[320px] lg:max-w-[320px] lg:rounded-2xl"
             : "lg:w-[360px] lg:max-w-[360px]"
         )}
