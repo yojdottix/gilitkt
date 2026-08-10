@@ -11,9 +11,10 @@ function getInitialTheme(): Theme {
   } catch {
     // localStorage unavailable — fall through to system preference
   }
-  if (typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches) {
-    return "dark";
-  }
+  // Light regardless of the OS setting. The library is a colour-critical tool —
+  // assets are authored against a white canvas — so a visitor whose laptop is on
+  // dark mode should still see the artwork the way it was drawn until they ask
+  // for dark themselves.
   return "light";
 }
 
@@ -57,7 +58,7 @@ function subscribe(listener: () => void) {
 /**
  * Reads and writes the app theme. Toggling adds/removes `dark` on <html>, which
  * is what the `@custom-variant dark` rule in globals.css keys off, and persists
- * the choice. Defaults to the OS preference the first time the app is opened.
+ * the choice. Defaults to light the first time the app is opened.
  */
 export function useTheme() {
   const theme = useSyncExternalStore(

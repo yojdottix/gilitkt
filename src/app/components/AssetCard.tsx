@@ -55,7 +55,7 @@ function AssetCardImpl({
   activeTags = [],
   islands = [],
   onUpdateIslands,
-  gridColumns = 4,
+  gridColumns = 5,
 }: AssetCardProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);

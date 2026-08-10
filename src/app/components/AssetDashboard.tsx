@@ -53,7 +53,7 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
   // View controls
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<SortOption>("recent");
-  const [gridColumns, setGridColumns] = useState(4);
+  const [gridColumns, setGridColumns] = useState(5);
   const [page, setPage] = useState(1);
   const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, totalPages: 1, total: 0 });
 

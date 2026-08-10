@@ -63,7 +63,7 @@ export function AssetGrid({
   islands = [],
   onUpdateIslands,
   onNavigateToAllAssets,
-  gridColumns = 4,
+  gridColumns = 5,
   sortBy = "recent",
   loading = false,
   justFinishedLoading = false,
@@ -147,7 +147,7 @@ export function AssetGrid({
       8: "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 3xl:grid-cols-7 4xl:grid-cols-8",
     };
     // 16px between columns, 20px between rows, as drawn.
-    return `grid gap-x-4 gap-y-5 ${columns[gridColumns] || columns[4]}`;
+    return `grid gap-x-4 gap-y-5 ${columns[gridColumns] || columns[5]}`;
   })();
 
   if (loading && assets.length === 0) {
