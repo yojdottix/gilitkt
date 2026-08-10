@@ -89,7 +89,7 @@ function AssetCardImpl({
   };
 
   /** Bare glyph in the media corner — the design gives it no fill or border. */
-  const islandButton = (
+  const renderIslandButton = (className?: string) => (
     <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
       <PopoverTrigger asChild>
         <button
@@ -98,14 +98,15 @@ function AssetCardImpl({
           title={memberCount > 0 ? `In ${memberCount} island(s)` : "Add to an island"}
           aria-label="Add to an island"
           className={cn(
-            "flex shrink-0 items-center justify-center rounded-lg p-1.5 transition-colors",
+            "flex shrink-0 items-center justify-center rounded-lg p-1.5 transition",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             // Bare over the thumbnail at rest; once the scrim comes up it needs
             // its own light surface to stay legible, which is also how the
             // design draws the hover state.
             "group-hover:bg-[var(--pp-bg-base)] group-hover:text-[var(--pp-icon-active)]",
             "hover:bg-[var(--pp-bg-backdrop)]",
-            memberCount > 0 ? "text-[var(--pp-text-active)]" : "text-[var(--pp-icon-high)]"
+            memberCount > 0 ? "text-[var(--pp-text-active)]" : "text-[var(--pp-icon-high)]",
+            className
           )}
         >
           <Plus className="size-5" />
@@ -251,7 +252,7 @@ function AssetCardImpl({
 
         <div className="hidden w-[280px] shrink-0 xl:block">{linkChip}</div>
 
-        {islandButton}
+        {renderIslandButton()}
       </div>
     );
   }
@@ -308,7 +309,21 @@ function AssetCardImpl({
           <span className="pointer-events-none flex items-center gap-0.5 rounded-[54px] bg-[var(--pp-n900)] px-2 py-0.5 text-sm leading-[1.43] text-[var(--pp-text-static-white)] opacity-0 transition-opacity duration-200 group-hover:opacity-100">
             {getAssetTypeLabel(asset.type)}
           </span>
-          {islandButton}
+          {/* Revealed on hover like the type chip beside it, so the artwork sits
+              on a clean tile at rest.
+
+              Gated on `(hover: hover)` rather than a breakpoint: a touch device
+              never produces the hover that would bring it back, so hiding it
+              there would make islands unreachable on a tablet held in landscape.
+              It also stays put while the picker is open — the pointer moves into
+              the popover, which is outside the card — and comes back for
+              keyboard users via focus-visible. */}
+          {renderIslandButton(
+            cn(
+              "group-hover:opacity-100 focus-visible:opacity-100",
+              !pickerOpen && "[@media(hover:hover)]:opacity-0"
+            )
+          )}
         </div>
       </div>
 

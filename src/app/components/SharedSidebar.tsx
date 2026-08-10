@@ -147,7 +147,7 @@ export function SharedSidebar({
           collapsed ? "justify-center" : "justify-start",
           active
             ? "bg-[var(--pp-bg-blue-low)] font-bold text-[var(--pp-text-active)]"
-            : "hover:bg-accent/50",
+            : "hover:bg-accent/50 hover:font-bold",
           !active &&
             !item.danger &&
             "text-[var(--pp-text-low)] hover:text-[var(--pp-text-high)]",
@@ -167,7 +167,9 @@ export function SharedSidebar({
           <>
             <span className="min-w-0 flex-1 truncate text-left">{item.title}</span>
             {item.count !== undefined && (
-              <span className="shrink-0 font-sans text-right text-sm font-normal">
+              // No weight of its own: it inherits the row's, so the count turns
+              // bold with the label when the row is active or hovered.
+              <span className="shrink-0 font-sans text-right text-sm">
                 {item.count}
               </span>
             )}
