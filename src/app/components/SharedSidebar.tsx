@@ -139,28 +139,24 @@ export function SharedSidebar({
         title={collapsed ? item.title : undefined}
         aria-current={active ? "page" : undefined}
         className={cn(
-          // The icon carries its own colour, so it can only follow the row's
-          // hover through a named group — a bare `group` would also match the
-          // sidebar root's own `group` and light every icon at once.
-          "group/nav flex w-full items-center gap-2 rounded-lg p-2 text-sm transition-colors",
+          "flex w-full items-center gap-2 rounded-lg p-2 text-sm transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           collapsed ? "justify-center" : "justify-start",
           active
             ? "bg-[var(--pp-bg-blue-low)] font-bold text-[var(--pp-text-active)]"
-            : "hover:bg-accent/50 hover:font-bold",
-          !active &&
-            !item.danger &&
-            "text-[var(--pp-text-low)] hover:text-[var(--pp-text-high)]",
+            : // Hover only adds weight and the background tint — label, count and
+              // icon all stay at low emphasis, so the row reads as reachable
+              // without competing with the active one.
+              "hover:bg-accent/50 hover:font-bold",
+          !active && !item.danger && "text-[var(--pp-text-low)]",
           item.danger && !active && "text-destructive hover:bg-destructive/10",
           item.danger && active && "bg-destructive/10 text-destructive"
         )}
       >
         <item.icon
           className={cn(
-            "size-5 shrink-0 transition-colors",
-            !active &&
-              !item.danger &&
-              "text-[var(--pp-icon-low)] group-hover/nav:text-[var(--pp-icon-high)]"
+            "size-5 shrink-0",
+            !active && !item.danger && "text-[var(--pp-icon-low)]"
           )}
         />
         {!collapsed && (
