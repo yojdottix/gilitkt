@@ -144,12 +144,18 @@ export function SharedSidebar({
           collapsed ? "justify-center" : "justify-start",
           active
             ? "bg-[var(--pp-bg-blue-low)] font-bold text-[var(--pp-text-active)]"
-            : "text-muted-foreground hover:bg-accent/50",
+            : "hover:bg-accent/50",
+          !active && !item.danger && "text-[var(--pp-text-low)]",
           item.danger && !active && "text-destructive hover:bg-destructive/10",
           item.danger && active && "bg-destructive/10 text-destructive"
         )}
       >
-        <item.icon className="size-5 shrink-0" />
+        <item.icon
+          className={cn(
+            "size-5 shrink-0",
+            !active && !item.danger && "text-[var(--pp-icon-low)]"
+          )}
+        />
         {!collapsed && (
           <>
             <span className="min-w-0 flex-1 truncate text-left">{item.title}</span>
@@ -219,7 +225,7 @@ export function SharedSidebar({
               aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
               title={open ? "Collapse sidebar" : "Expand sidebar"}
               className={cn(
-                "rounded-md p-0.5 text-muted-foreground hover:text-foreground",
+                "rounded-md p-0.5 text-[var(--pp-icon-low)] hover:text-foreground",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 open
                   ? "opacity-100"
@@ -253,7 +259,7 @@ export function SharedSidebar({
               <button
                 type="button"
                 onClick={onNavigateBack}
-                className="mt-2 w-full rounded-lg p-2 text-left text-sm text-muted-foreground transition-colors hover:bg-accent/50"
+                className="mt-2 w-full rounded-lg p-2 text-left text-sm text-[var(--pp-text-low)] transition-colors hover:bg-accent/50"
               >
                 {collapsed ? "←" : "← Back to dashboard"}
               </button>
@@ -290,7 +296,7 @@ export function SharedSidebar({
 function NavGroup({ label, children }: { label: string | null; children: React.ReactNode }) {
   return (
     <div className="flex w-full flex-col gap-3">
-      {label && <p className="text-sm font-bold text-muted-foreground">{label}</p>}
+      {label && <p className="text-sm font-bold text-[var(--pp-text-low)]">{label}</p>}
       <div className="flex w-full flex-col gap-0.5">{children}</div>
     </div>
   );

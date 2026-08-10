@@ -88,7 +88,10 @@ function SuperuserScreens({ activeTab, onTabChange, onNavigateBack }: SuperuserS
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background">
+      {/* Same shell as the dashboard: the page is the sunken surface and the
+          admin screens sit on it as a floating white panel, padded on three
+          sides so it butts up against the sidebar. */}
+      <div className="flex h-screen w-full bg-[var(--pp-bg-sunken)]">
         <SharedSidebar
           mode="admin"
           activeAdminTab={activeTab}
@@ -104,29 +107,34 @@ function SuperuserScreens({ activeTab, onTabChange, onNavigateBack }: SuperuserS
           handleRefresh={handleRefresh}
         />
 
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <header className="border-b bg-card">
-            <div className="flex h-16 items-center gap-4 px-6">
-              <SidebarTrigger className="lg:hidden" />
-              <h1 className="text-xl font-bold text-foreground">{ADMIN_TAB_TITLES[activeTab]}</h1>
-            </div>
-          </header>
+        <div className="flex min-w-0 flex-1 flex-col py-3 pr-3 [filter:drop-shadow(var(--gili-panel-shadow))]">
+          <div className="flex min-h-px flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card">
+            <header className="flex w-full shrink-0 items-start gap-1 px-6 pb-4 pt-6">
+              {/* Only reachable control for the off-canvas sidebar on mobile. */}
+              <SidebarTrigger className="mr-1 size-9 shrink-0 lg:hidden" />
+              <h1 className="pp-h3 min-w-0 truncate text-foreground">
+                {ADMIN_TAB_TITLES[activeTab]}
+              </h1>
+            </header>
 
-          {/*
-            Plain switch rather than <Tabs>. The tab bar was removed in 1.x when
-            navigation moved into the sidebar, which left Radix Tabs rendering
-            every panel and hiding all but one — so all eight admin screens
-            mounted and ran their effects on every visit.
-          */}
-          <div className="flex-1 overflow-y-auto">
-            {activeTab === "manage" && <ManageAsset />}
-            {activeTab === "analytics" && <Analytics />}
-            {activeTab === "csv-viewer" && <CsvViewer />}
-            {activeTab === "manual-input" && <ManualInput />}
-            {activeTab === "backup" && <BackupRestore />}
-            {activeTab === "hard-reset" && <HardResetDatabase />}
-            {activeTab === "settings" && <AdminSettings />}
-            {activeTab === "about-image" && <AboutImageManager />}
+            <div className="h-px w-full shrink-0 bg-[var(--pp-stroke-disabled)]" />
+
+            {/*
+              Plain switch rather than <Tabs>. The tab bar was removed in 1.x when
+              navigation moved into the sidebar, which left Radix Tabs rendering
+              every panel and hiding all but one — so all eight admin screens
+              mounted and ran their effects on every visit.
+            */}
+            <div className="min-h-px flex-1 overflow-y-auto">
+              {activeTab === "manage" && <ManageAsset />}
+              {activeTab === "analytics" && <Analytics />}
+              {activeTab === "csv-viewer" && <CsvViewer />}
+              {activeTab === "manual-input" && <ManualInput />}
+              {activeTab === "backup" && <BackupRestore />}
+              {activeTab === "hard-reset" && <HardResetDatabase />}
+              {activeTab === "settings" && <AdminSettings />}
+              {activeTab === "about-image" && <AboutImageManager />}
+            </div>
           </div>
         </div>
       </div>
