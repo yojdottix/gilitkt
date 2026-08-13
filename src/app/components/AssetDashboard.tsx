@@ -12,9 +12,9 @@ import { AssetDetailPanel } from "./AssetDetailPanel";
 import { AssetTypeControl, PaginationControl, SortControl, ViewControl } from "./HeaderControls";
 import { SuperuserLoginModal } from "./SuperuserLoginModal";
 import { IslandManager } from "./islands/IslandManager";
-import { CuratedIslandBrowser } from "./islands/CuratedIslandBrowser";
-import { CURATED_KEY, ISLANDS_KEY, ISLAND_STORAGE_KEY, type Island } from "./islands/types";
-import { fetchCuratedIslands, type CuratedIsland } from "../utils/curatedIslands";
+import { HarborBrowser } from "./islands/HarborBrowser";
+import { HARBOR_KEY, ISLANDS_KEY, ISLAND_STORAGE_KEY, type Island } from "./islands/types";
+import { fetchHarborIslands, type HarborIsland } from "../utils/harbor";
 import { getAllAssets, getAssetCounts, Asset } from "../utils/appwriteApi";
 import { activeTags, toggleTagInQuery } from "../utils/search";
 import { useSuperuser } from "../context/SuperuserContext";
@@ -37,7 +37,7 @@ const CATEGORY_TITLES: Record<string, string> = {
   Supergraphic: "Supergraphic",
   Other: "Other",
   [ISLANDS_KEY]: "Island",
-  [CURATED_KEY]: "Curated Islands",
+  [HARBOR_KEY]: "Harbor",
 };
 
 export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardProps) {
@@ -71,8 +71,8 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
   // Data
   const [assets, setAssets] = useState<Asset[]>([]);
   const [islands, setIslands] = useState<Island[]>([]);
-  const [curated, setCurated] = useState<CuratedIsland[]>([]);
-  const [curatedLoading, setCuratedLoading] = useState(true);
+  const [harbor, setHarbor] = useState<HarborIsland[]>([]);
+  const [harborLoading, setHarborLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dataSource, setDataSource] = useState("loading");
@@ -87,17 +87,17 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
   const hasLoadedOnceRef = useRef(false);
 
   const isIslandList = selectedCategory === ISLANDS_KEY && !selectedIsland;
-  const isCuratedList = selectedCategory === CURATED_KEY && !selectedIsland;
+  const isHarborList = selectedCategory === HARBOR_KEY && !selectedIsland;
   /*
-   * Opening a curated island reuses selectedIsland: a curated island is the same
+   * Opening a harbor island reuses selectedIsland: a harbor island is the same
    * shape as a personal one, so the detail view — heading, back arrow, grid,
    * search, type filter — is the same view over a different member list. What
    * differs is only who may edit the collection, and nothing in the detail view
    * edits it.
    */
   const isIslandDetail = Boolean(selectedIsland);
-  const isCuratedDetail = selectedCategory === CURATED_KEY && isIslandDetail;
-  const isCollectionList = isIslandList || isCuratedList;
+  const isHarborDetail = selectedCategory === HARBOR_KEY && isIslandDetail;
+  const isCollectionList = isIslandList || isHarborList;
   const showTypeFilter = selectedCategory === "All Assets" || isIslandDetail;
 
   const loadAssets = useCallback(async (showLoading = true, forceRefresh = false) => {
@@ -137,15 +137,15 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
   }, []);
 
   // Published collections, read straight from Storage on load. A few kilobytes,
-  // and zero database reads — see curatedIslands.ts.
+  // and zero database reads — see harbor.ts.
   useEffect(() => {
     let alive = true;
-    fetchCuratedIslands()
+    fetchHarborIslands()
       .then((next) => {
-        if (alive) setCurated(next);
+        if (alive) setHarbor(next);
       })
       .finally(() => {
-        if (alive) setCuratedLoading(false);
+        if (alive) setHarborLoading(false);
       });
     return () => {
       alive = false;
@@ -183,9 +183,9 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
   const assetCounts = useMemo(() => {
     const counts = getAssetCounts(assets);
     counts[ISLANDS_KEY] = islands.length;
-    counts[CURATED_KEY] = curated.length;
+    counts[HARBOR_KEY] = harbor.length;
     return counts;
-  }, [assets, islands, curated]);
+  }, [assets, islands, harbor]);
 
   const handleUpdateIslands = useCallback(
     (next: Island[]) => {
@@ -194,14 +194,14 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
       // Keep the open island in step with the edit, and drop it if deleted.
       setSelectedIsland((current) => {
         if (!current) return null;
-        // Unless what's open is a curated island, which isn't in this list at
+        // Unless what's open is a harbor island, which isn't in this list at
         // all: looking it up here would close the collection every time someone
         // used a card's + button while browsing one.
-        if (isCuratedDetail) return current;
+        if (isHarborDetail) return current;
         return next.find((i) => i.id === current.id) ?? null;
       });
     },
-    [isCuratedDetail]
+    [isHarborDetail]
   );
 
   const handleTagClick = useCallback((tag: string) => {
@@ -257,7 +257,7 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
       return `${n.toLocaleString()} ${n === 1 ? "asset" : "assets"}`;
     }
     if (isIslandList) return islands.length.toLocaleString();
-    if (isCuratedList) return curated.length.toLocaleString();
+    if (isHarborList) return harbor.length.toLocaleString();
     return pageInfo.total.toLocaleString();
   })();
 
@@ -302,7 +302,7 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
                   >
                     <ArrowNarrowLeft className="size-5" />
                     <span className="sr-only">
-                      {isCuratedDetail ? "Back to curated islands" : "Back to islands"}
+                      {isHarborDetail ? "Back to Harbor" : "Back to islands"}
                     </span>
                   </button>
                 )}
@@ -401,11 +401,11 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
                 </Alert>
               )}
 
-              {isCuratedList ? (
-                <CuratedIslandBrowser
+              {isHarborList ? (
+                <HarborBrowser
                   assets={assets}
-                  islands={curated}
-                  loading={curatedLoading || (loading && assets.length === 0)}
+                  islands={harbor}
+                  loading={harborLoading || (loading && assets.length === 0)}
                   onSelectIsland={handleSelectIsland}
                 />
               ) : isIslandList ? (

@@ -19,7 +19,7 @@ function download(filename: string, contents: string, mime: string) {
 /**
  * Download an island's contents as a file.
  *
- * Shared by the user's own islands and the curated ones, which export
+ * Shared by the user's own islands and the harbor's, which export
  * identically — a collection is a collection, whoever assembled it.
  */
 export function exportIslandAssets(island: Island, members: Asset[], format: "csv" | "txt") {
