@@ -62,6 +62,11 @@ export const SUPERUSER_CREDENTIAL_FILE_ID = 'superuser_auth';
 // The published library. Viewers read this instead of the database, which is what
 // keeps database reads flat as the number of users grows. See librarySnapshot.ts.
 export const LIBRARY_SNAPSHOT_FILE_ID = 'library_snapshot';
+// The superuser's curated islands, published for everyone to read. Same bucket
+// and same publish mechanics as the library snapshot, but a separate file: it is
+// a few kilobytes against the library's ~1.8 MB, and it changes on a completely
+// different schedule. See curatedIslands.ts.
+export const CURATED_ISLANDS_FILE_ID = 'curated_islands';
 
 const client = new Client()
   .setEndpoint(APPWRITE_ENDPOINT)

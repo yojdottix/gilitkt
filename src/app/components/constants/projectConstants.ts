@@ -35,3 +35,23 @@ export function getAssetTypeLabel(type: string | undefined | null): string {
   if (!type) return 'Other';
   return ASSET_TYPE_LABELS[type as keyof typeof ASSET_TYPE_LABELS] ?? type;
 }
+
+/**
+ * The Asset Type filter's options, in the order the design lists them.
+ *
+ * `value` is what `asset.type` actually holds — the short forms — and `label` is
+ * the full name the design writes. Three of the five differ, which is why this
+ * can't be derived from ASSET_TYPE_LABELS: that map runs the other way, and its
+ * keys include legacy aliases that would show up here as duplicate rows.
+ *
+ * These are the same five buckets the sidebar counts, so a type outside the list
+ * (the "General" fallback from extractTypeFromFilename) is filtered out by any
+ * selection — exactly as it already is by the sidebar's own categories.
+ */
+export const ASSET_TYPE_FILTERS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: 'Spot', label: 'Spot Illustration' },
+  { value: 'Micro', label: 'Micro Illustration' },
+  { value: 'Icon', label: 'Icon' },
+  { value: 'Supergraphic', label: 'Supergraphic' },
+  { value: 'Other', label: 'Other' },
+];

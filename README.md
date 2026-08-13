@@ -12,6 +12,7 @@ Asset management dashboard for organizing illustration assets.
 - Tag chips are multi-select filters: clicking adds a `#tag` to the search, several can be on at once (any of them matches), and active chips are highlighted
 - **View, Sort and Pagination live in three header popovers**, so the controls sit in one place instead of being spread between the header and the end of the grid
 - Sort by Most Recent (last touched — includes assets whose Lightroom link was replaced), Alphabetical, or Type
+- **Asset Type chip** on All Assets and inside an island — a searchable multi-select; the chip names the type when one is on and carries a count when several are, and selected types group to the top of the menu
 - Grid/List view with adjustable card size (4–10 columns)
 - Pagination at 50 assets per page, driven from the header popover and available without scrolling to the bottom of the grid
 - Asset detail panel (preview, metadata, tags, Source link that opens the asset in Lightroom, copy link, Download, Add to Island) — a bottom sheet with swipe-to-dismiss on mobile, a 360px right-side panel on desktop
@@ -30,6 +31,12 @@ Asset management dashboard for organizing illustration assets.
 - Island cards show a collage of their contents, so a collection is recognisable before you open it
 - Glassmorphic kebab menu per island: Rename, Export to CSV, Export to TXT, Delete
 - One picker handles both adding and removing, with search and inline island creation, replacing the four separate dialogs 1.x used for the same job
+
+### Curated Islands
+- Read-only shelves assembled by the Superuser and published for everyone, so someone who doesn't know what an asset is called can browse a collection instead of guessing at the search box
+- Same cards and same exports as your own islands; only Rename and Delete are absent, because only the Superuser can change one
+- Published as a single JSON file to Appwrite Storage, like the library snapshot — no database reads for viewers, and no auth to arrange
+- Membership is stored as filenames, so a collection never drifts from the library: an asset that has since been deleted simply stops appearing
 
 ### Superuser
 *(formerly "Admin")*
@@ -51,6 +58,7 @@ Asset management dashboard for organizing illustration assets.
 - Edit & delete assets, including click-to-rename directly in the list — costs no database reads, so it works even while the read quota is exhausted
 - Anonymous usage counting: active devices in the last 7/30 days, all-time devices split desktop/mobile, and total sessions — no IP, no user-agent, no personal data
 - Analytics — total assets, per-category counts and shares, assets added in the last 7/30 days, and a data-health panel flagging uncategorised assets, missing Lightroom links and duplicate filenames
+- **Curated Islands** — build the collections everyone sees: name them, search the library to add or drop assets, and publish the whole set in one go, so a half-built shelf is never visible
 - **Backup & Restore** — one JSON file with every asset and island, plus assets-only CSV export and a snapshot/read-budget panel
 - Hard reset database (password + typed confirmation required)
 - Change Superuser password from the UI — applies immediately on every device, no redeploy. Requires the current password, and enforces a 12-character minimum with penalties for predictable shapes

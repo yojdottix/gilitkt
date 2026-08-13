@@ -28,6 +28,9 @@ export const ISLAND_STORAGE_KEY = "gili-projects";
 /** Sidebar/count key for islands. Not an asset type, so it isn't in getAssetCounts(). */
 export const ISLANDS_KEY = "Islands";
 
+/** Sidebar/count key for the superuser's published collections. */
+export const CURATED_KEY = "Curated";
+
 export const ISLAND_COLORS = [
   "#3b82f6",
   "#ef4444",
