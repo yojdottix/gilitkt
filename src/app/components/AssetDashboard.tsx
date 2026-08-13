@@ -9,10 +9,12 @@ import { AboutModal } from "./AboutModal";
 import { SharedSidebar } from "./SharedSidebar";
 import { AssetGrid, type PageInfo, type SortOption } from "./AssetGrid";
 import { AssetDetailPanel } from "./AssetDetailPanel";
-import { PaginationControl, SortControl, ViewControl } from "./HeaderControls";
+import { AssetTypeControl, PaginationControl, SortControl, ViewControl } from "./HeaderControls";
 import { SuperuserLoginModal } from "./SuperuserLoginModal";
 import { IslandManager } from "./islands/IslandManager";
-import { ISLANDS_KEY, ISLAND_STORAGE_KEY, type Island } from "./islands/types";
+import { CuratedIslandBrowser } from "./islands/CuratedIslandBrowser";
+import { CURATED_KEY, ISLANDS_KEY, ISLAND_STORAGE_KEY, type Island } from "./islands/types";
+import { fetchCuratedIslands, type CuratedIsland } from "../utils/curatedIslands";
 import { getAllAssets, getAssetCounts, Asset } from "../utils/appwriteApi";
 import { activeTags, toggleTagInQuery } from "../utils/search";
 import { useSuperuser } from "../context/SuperuserContext";
@@ -35,6 +37,7 @@ const CATEGORY_TITLES: Record<string, string> = {
   Supergraphic: "Supergraphic",
   Other: "Other",
   [ISLANDS_KEY]: "Island",
+  [CURATED_KEY]: "Curated Islands",
 };
 
 export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardProps) {
@@ -54,12 +57,22 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<SortOption>("recent");
   const [gridColumns, setGridColumns] = useState(5);
+  /*
+   * Asset types switched on in the header chip.
+   *
+   * Offered on All Assets and inside an island — the two views that hold a mix
+   * of types. The per-type categories in the sidebar are already a single type,
+   * so a second type filter there could only ever empty the page.
+   */
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, totalPages: 1, total: 0 });
 
   // Data
   const [assets, setAssets] = useState<Asset[]>([]);
   const [islands, setIslands] = useState<Island[]>([]);
+  const [curated, setCurated] = useState<CuratedIsland[]>([]);
+  const [curatedLoading, setCuratedLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dataSource, setDataSource] = useState("loading");
@@ -74,7 +87,18 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
   const hasLoadedOnceRef = useRef(false);
 
   const isIslandList = selectedCategory === ISLANDS_KEY && !selectedIsland;
+  const isCuratedList = selectedCategory === CURATED_KEY && !selectedIsland;
+  /*
+   * Opening a curated island reuses selectedIsland: a curated island is the same
+   * shape as a personal one, so the detail view — heading, back arrow, grid,
+   * search, type filter — is the same view over a different member list. What
+   * differs is only who may edit the collection, and nothing in the detail view
+   * edits it.
+   */
   const isIslandDetail = Boolean(selectedIsland);
+  const isCuratedDetail = selectedCategory === CURATED_KEY && isIslandDetail;
+  const isCollectionList = isIslandList || isCuratedList;
+  const showTypeFilter = selectedCategory === "All Assets" || isIslandDetail;
 
   const loadAssets = useCallback(async (showLoading = true, forceRefresh = false) => {
     try {
@@ -112,6 +136,22 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
     }
   }, []);
 
+  // Published collections, read straight from Storage on load. A few kilobytes,
+  // and zero database reads — see curatedIslands.ts.
+  useEffect(() => {
+    let alive = true;
+    fetchCuratedIslands()
+      .then((next) => {
+        if (alive) setCurated(next);
+      })
+      .finally(() => {
+        if (alive) setCuratedLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 250);
     return () => clearTimeout(timer);
@@ -138,24 +178,30 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
   // land on a page that no longer exists.
   useEffect(() => {
     setPage(1);
-  }, [selectedCategory, debouncedSearchQuery, sortBy, selectedIsland]);
+  }, [selectedCategory, debouncedSearchQuery, sortBy, selectedIsland, selectedTypes]);
 
   const assetCounts = useMemo(() => {
     const counts = getAssetCounts(assets);
     counts[ISLANDS_KEY] = islands.length;
+    counts[CURATED_KEY] = curated.length;
     return counts;
-  }, [assets, islands]);
+  }, [assets, islands, curated]);
 
   const handleUpdateIslands = useCallback(
     (next: Island[]) => {
       setIslands(next);
       localStorage.setItem(ISLAND_STORAGE_KEY, JSON.stringify(next));
       // Keep the open island in step with the edit, and drop it if deleted.
-      setSelectedIsland((current) =>
-        current ? next.find((i) => i.id === current.id) ?? null : null
-      );
+      setSelectedIsland((current) => {
+        if (!current) return null;
+        // Unless what's open is a curated island, which isn't in this list at
+        // all: looking it up here would close the collection every time someone
+        // used a card's + button while browsing one.
+        if (isCuratedDetail) return current;
+        return next.find((i) => i.id === current.id) ?? null;
+      });
     },
-    []
+    [isCuratedDetail]
   );
 
   const handleTagClick = useCallback((tag: string) => {
@@ -184,6 +230,9 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
     setSelectedCategory(categoryKey);
     setSelectedIsland(null);
     setSelectedAsset(null);
+    // The chip is hidden on the per-type categories, so a selection carried over
+    // from All Assets would keep filtering from somewhere the user can't see it.
+    setSelectedTypes([]);
   };
 
   const handleSelectIsland = (island: Island | null) => {
@@ -207,7 +256,9 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
       const n = selectedIsland.asset_ids.length;
       return `${n.toLocaleString()} ${n === 1 ? "asset" : "assets"}`;
     }
-    return (isIslandList ? islands.length : pageInfo.total).toLocaleString();
+    if (isIslandList) return islands.length.toLocaleString();
+    if (isCuratedList) return curated.length.toLocaleString();
+    return pageInfo.total.toLocaleString();
   })();
 
   return (
@@ -250,7 +301,9 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
                     className="mr-[10px] mt-0.5 shrink-0 text-[var(--pp-text-high)] transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <ArrowNarrowLeft className="size-5" />
-                    <span className="sr-only">Back to islands</span>
+                    <span className="sr-only">
+                      {isCuratedDetail ? "Back to curated islands" : "Back to islands"}
+                    </span>
                   </button>
                 )}
 
@@ -291,10 +344,14 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
                 )}
               </div>
 
-              {/* The island list has nothing to sort, page, or set density on. */}
-              {!isIslandList && (
+              {/* A list of collections has nothing to sort, page, or set density on. */}
+              {!isCollectionList && (
                 <div className="flex w-full items-center justify-between gap-4">
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                  {/* Scrolls rather than wraps or squashes. Three chips plus the
+                      page range do not fit a phone, and the row is a single line
+                      in the design — so on a narrow screen the chips slide under
+                      the pager instead of colliding with it. */}
+                  <div className="scrollbar-thin flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
                     <ViewControl
                       viewMode={viewMode}
                       onViewModeChange={setViewMode}
@@ -302,13 +359,22 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
                       onGridColumnsChange={setGridColumns}
                     />
                     <SortControl sortBy={sortBy} onSortChange={setSortBy} />
+                    {showTypeFilter && (
+                      <AssetTypeControl selected={selectedTypes} onChange={setSelectedTypes} />
+                    )}
                   </div>
-                  <PaginationControl
-                    page={pageInfo.page}
-                    totalPages={pageInfo.totalPages}
-                    total={pageInfo.total}
-                    onPageChange={setPage}
-                  />
+                  {/* Desktop only, and always was: below lg the grid portals its
+                      own pager to the bottom of the viewport, so this one was a
+                      second copy of the same control. Dropping it here is what
+                      leaves room for a third chip on a phone. */}
+                  <div className="hidden shrink-0 lg:block">
+                    <PaginationControl
+                      page={pageInfo.page}
+                      totalPages={pageInfo.totalPages}
+                      total={pageInfo.total}
+                      onPageChange={setPage}
+                    />
+                  </div>
                 </div>
               )}
             </header>
@@ -335,7 +401,14 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
                 </Alert>
               )}
 
-              {isIslandList ? (
+              {isCuratedList ? (
+                <CuratedIslandBrowser
+                  assets={assets}
+                  islands={curated}
+                  loading={curatedLoading || (loading && assets.length === 0)}
+                  onSelectIsland={handleSelectIsland}
+                />
+              ) : isIslandList ? (
                 <IslandManager
                   assets={assets}
                   islands={islands}
@@ -356,6 +429,7 @@ export function AssetDashboard({ onNavigateToAssetManagement }: AssetDashboardPr
                   onSelectAsset={setSelectedAsset}
                   onTagClick={handleTagClick}
                   activeTags={currentActiveTags}
+                  types={showTypeFilter ? selectedTypes : []}
                   islands={islands}
                   onUpdateIslands={handleUpdateIslands}
                   onNavigateToAllAssets={() => handleCategoryClick("All Assets")}

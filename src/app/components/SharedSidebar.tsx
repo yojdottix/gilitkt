@@ -9,6 +9,7 @@ import { BarChart3, Download, Image, KeyRound, Plus, Settings, Trash2, Upload } 
 import {
   Atom02,
   Compass03,
+  Copy03,
   Cube01,
   Image01,
   Island,
@@ -16,12 +17,12 @@ import {
   PuzzlePiece02,
   StickerCircle,
 } from './icons/figma';
-import { ISLANDS_KEY } from './islands/types';
+import { CURATED_KEY, ISLANDS_KEY } from './islands/types';
 
 // "upload" (the old Upload Asset screen) was removed: it duplicated the CSV
 // import that Upload CSV already does, and having two doors to the same job
 // meant guessing which one was current. Its CSV template moved into CsvViewer.
-export type AdminTab = "csv-viewer" | "manual-input" | "manage" | "analytics" | "backup" | "hard-reset" | "settings" | "about-image";
+export type AdminTab = "csv-viewer" | "manual-input" | "manage" | "analytics" | "curated" | "backup" | "hard-reset" | "settings" | "about-image";
 
 /**
  * The key is the value the rest of the app filters on and must keep matching
@@ -104,11 +105,19 @@ export function SharedSidebar({
     count: assetCounts[ISLANDS_KEY] || 0,
   };
 
+  const curatedItem: SidebarNavItem = {
+    key: CURATED_KEY,
+    title: "Curated",
+    icon: Copy03,
+    count: assetCounts[CURATED_KEY] || 0,
+  };
+
   const adminItems: SidebarNavItem[] = [
     { key: "csv-viewer", title: "Upload CSV", icon: Upload },
     { key: "manual-input", title: "Manual Input", icon: Plus },
     { key: "manage", title: "Manage Asset", icon: Settings },
     { key: "analytics", title: "Analytics", icon: BarChart3 },
+    { key: "curated", title: "Curated Islands", icon: Copy03 },
     { key: "backup", title: "Backup & Restore", icon: Download },
     { key: "about-image", title: "About Image", icon: Image },
   ];
@@ -276,7 +285,12 @@ export function SharedSidebar({
               {assetTypeItems.map(renderItem)}
             </NavGroup>
             <Divider />
-            {renderItem(islandItem)}
+            {/* Both collections live below the rule: the list above is what an
+                asset IS, these two are how assets are grouped. */}
+            <NavGroup label={null}>
+              {renderItem(islandItem)}
+              {renderItem(curatedItem)}
+            </NavGroup>
           </>
         )}
       </SidebarContent>

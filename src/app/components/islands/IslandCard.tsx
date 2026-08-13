@@ -12,10 +12,17 @@ interface IslandCardProps {
   /** Members of this island, already resolved from the full asset list. */
   members: Asset[];
   onOpen: () => void;
-  onRename: () => void;
-  onExportCsv: () => void;
-  onExportTxt: () => void;
-  onDelete: () => void;
+  /*
+   * Every action is optional, and the kebab only appears for the ones supplied.
+   * A curated island is the same card with the same collage, but nobody except
+   * the superuser may rename or delete one — so those two are simply left off
+   * rather than passed and then disabled, which would advertise a control that
+   * can never do anything.
+   */
+  onRename?: () => void;
+  onExportCsv?: () => void;
+  onExportTxt?: () => void;
+  onDelete?: () => void;
 }
 
 /**
@@ -37,6 +44,8 @@ export function IslandCard({
 }: IslandCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const total = island.asset_ids.length;
+  const hasExports = Boolean(onExportCsv || onExportTxt);
+  const hasMenu = Boolean(onRename || onDelete) || hasExports;
 
   const run = (action: () => void) => () => {
     setMenuOpen(false);
@@ -74,6 +83,7 @@ export function IslandCard({
       </div>
 
       {/* Kebab sits over the card's top-right corner, outside the grid. */}
+      {hasMenu && (
       <div className="absolute right-0 top-0 p-2">
         <Popover open={menuOpen} onOpenChange={setMenuOpen}>
           <PopoverTrigger asChild>
@@ -95,26 +105,39 @@ export function IslandCard({
             className="w-48 border-0 bg-transparent p-0 shadow-none"
           >
             <GlassMenu className="rounded-2xl py-2">
-              <GlassMenuItem icon={Edit02} onClick={run(onRename)}>
-                Rename
-              </GlassMenuItem>
-              <GlassMenuDivider />
+              {onRename && (
+                <>
+                  <GlassMenuItem icon={Edit02} onClick={run(onRename)}>
+                    Rename
+                  </GlassMenuItem>
+                  {hasExports && <GlassMenuDivider />}
+                </>
+              )}
               {/* 02 is the lined document, 01 the plain sheet. The design puts
                   the lined one on CSV; these were the other way round. */}
-              <GlassMenuItem icon={FileDownload02} onClick={run(onExportCsv)}>
-                Export to CSV
-              </GlassMenuItem>
-              <GlassMenuItem icon={FileDownload01} onClick={run(onExportTxt)}>
-                Export to TXT
-              </GlassMenuItem>
-              <GlassMenuDivider />
-              <GlassMenuItem icon={Trash03} destructive onClick={run(onDelete)}>
-                Delete Island
-              </GlassMenuItem>
+              {onExportCsv && (
+                <GlassMenuItem icon={FileDownload02} onClick={run(onExportCsv)}>
+                  Export to CSV
+                </GlassMenuItem>
+              )}
+              {onExportTxt && (
+                <GlassMenuItem icon={FileDownload01} onClick={run(onExportTxt)}>
+                  Export to TXT
+                </GlassMenuItem>
+              )}
+              {onDelete && (
+                <>
+                  {hasExports && <GlassMenuDivider />}
+                  <GlassMenuItem icon={Trash03} destructive onClick={run(onDelete)}>
+                    Delete Island
+                  </GlassMenuItem>
+                </>
+              )}
             </GlassMenu>
           </PopoverContent>
         </Popover>
       </div>
+      )}
     </div>
   );
 }

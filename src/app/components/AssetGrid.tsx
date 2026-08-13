@@ -31,6 +31,12 @@ interface AssetGridProps {
   onTagClick?: (tag: string) => void;
   /** Lowercased tags currently switched on, forwarded to every card. */
   activeTags?: string[];
+  /**
+   * Asset types switched on in the header's Asset Type chip. Empty means no type
+   * filter at all, which is not the same as "all five selected" — an asset whose
+   * type falls outside the five buckets survives the former and not the latter.
+   */
+  types?: string[];
   islands?: Island[];
   onUpdateIslands?: (islands: Island[]) => void;
   onNavigateToAllAssets?: () => void;
@@ -60,6 +66,7 @@ export function AssetGrid({
   onSelectAsset,
   onTagClick,
   activeTags = [],
+  types = [],
   islands = [],
   onUpdateIslands,
   onNavigateToAllAssets,
@@ -80,6 +87,7 @@ export function AssetGrid({
     let filtered = assets;
     if (searchQuery) filtered = searchAssets(filtered, searchQuery);
     if (category !== "Island") filtered = filterAssetsByCategory(filtered, category);
+    if (types.length > 0) filtered = filtered.filter((asset) => types.includes(asset.type));
 
     return [...filtered].sort((a, b) => {
       if (sortBy === "alphabetical") {
@@ -99,7 +107,7 @@ export function AssetGrid({
       // see. See lastTouchedAt().
       return lastTouchedAt(b) - lastTouchedAt(a);
     });
-  }, [assets, searchQuery, category, sortBy]);
+  }, [assets, searchQuery, category, types, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAssets.length / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, page), totalPages);
@@ -195,11 +203,13 @@ export function AssetGrid({
               <p className="w-full text-lg leading-[1.33]">
                 {searchQuery
                   ? `No assets match "${searchQuery}". Try different search terms.`
-                  : isIsland
-                    ? "This island is empty. Browse all assets to find things to add."
-                    : assets.length === 0
-                      ? "Start by uploading your first assets to the library."
-                      : `No assets found in the ${getAssetTypeLabel(category)} category.`}
+                  : types.length > 0
+                    ? "No assets match the asset types you picked. Try clearing one."
+                    : isIsland
+                      ? "This island is empty. Browse all assets to find things to add."
+                      : assets.length === 0
+                        ? "Start by uploading your first assets to the library."
+                        : `No assets found in the ${getAssetTypeLabel(category)} category.`}
               </p>
             </div>
 

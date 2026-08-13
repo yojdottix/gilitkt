@@ -1,8 +1,10 @@
 import { forwardRef, useState, type ReactNode } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { cn } from "./ui/utils";
-import { GlassMenu, GlassMenuItem } from "./GlassMenu";
-import { ChevronDown, ChevronLeft, ChevronRight } from "./icons/figma";
+import { GlassMenu, GlassMenuDivider, GlassMenuItem } from "./GlassMenu";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, SearchLg } from "./icons/figma";
+import { X } from "./icons";
+import { ASSET_TYPE_FILTERS } from "./constants/projectConstants";
 import { type SortOption } from "./AssetGrid";
 
 /**
@@ -179,6 +181,201 @@ export function ViewControl({
         </>
       )}
     </ControlPopover>
+  );
+}
+
+/**
+ * One option in the Asset Type menu.
+ *
+ * Structured like GlassMenuItem — outer box owns the hit area, inner box owns
+ * the hover plate — but it cannot BE a GlassMenuItem: that component puts a
+ * trailing check on a chosen row, and this menu is multi-select, so the design
+ * gives every row a leading checkbox that is present whether or not it is on.
+ */
+function AssetTypeOption({
+  label,
+  checked,
+  onToggle,
+}: {
+  label: string;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitemcheckbox"
+      aria-checked={checked}
+      onClick={onToggle}
+      className="group/row w-full text-left focus-visible:outline-none"
+    >
+      <span
+        className={cn(
+          "flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-base font-bold leading-[1.38] transition-colors",
+          "text-[var(--pp-text-static-white)]",
+          "group-hover/row:bg-white/10 group-focus-visible/row:bg-white/10"
+        )}
+      >
+        {/* The box keeps its 40%-white fill in both states — the design does not
+            switch it to a solid accent when ticked, the glyph alone reports it.
+            Fixed white rather than a surface token because this panel is dark in
+            both themes. */}
+        <span
+          aria-hidden="true"
+          className="flex size-5 shrink-0 items-center justify-center rounded bg-white/40"
+        >
+          {checked && <Check className="size-4" />}
+        </span>
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+      </span>
+    </button>
+  );
+}
+
+/**
+ * The Asset Type filter: a chip that reports what is on, and a searchable
+ * multi-select menu behind it.
+ *
+ * The chip has three faces, per the design. Nothing selected, it reads "Asset
+ * Type" with a caret, like View and Sort. Exactly one, it names that type and
+ * offers a cross to drop it, because with a single filter the label alone says
+ * everything and clearing is the only likely next move. Two or more, the name
+ * would no longer fit, so it goes back to "Asset Type" with a count badge.
+ */
+export function AssetTypeControl({
+  selected,
+  onChange,
+}: {
+  selected: string[];
+  onChange: (types: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const toggle = (value: string) =>
+    onChange(
+      selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]
+    );
+
+  const soleLabel =
+    selected.length === 1
+      ? ASSET_TYPE_FILTERS.find((t) => t.value === selected[0])?.label
+      : undefined;
+
+  const needle = query.trim().toLowerCase();
+  const matches = ASSET_TYPE_FILTERS.filter((t) => t.label.toLowerCase().includes(needle));
+  // Chosen types rise into their own group above the rule, so what is on is
+  // legible without reading the whole list.
+  const chosen = matches.filter((t) => selected.includes(t.value));
+  const rest = matches.filter((t) => !selected.includes(t.value));
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        // A stale search term would otherwise hide most of the list next time.
+        if (!next) setQuery("");
+      }}
+    >
+      {/* The border belongs to this wrapper, not to the trigger, so the clear
+          cross can live inside the same outline while staying its own button —
+          a button nested in a button is invalid, and making the cross a span
+          would take it away from keyboard and screen-reader users. */}
+      <div
+        className={cn(
+          "flex shrink-0 items-center rounded-lg border bg-card transition-colors",
+          selected.length ? "border-[var(--pp-stroke-active)]" : "border-border"
+        )}
+      >
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label={
+              selected.length ? `Asset type, ${selected.length} selected` : "Filter by asset type"
+            }
+            className={cn(
+              "flex items-center gap-1 rounded-lg px-3 py-2",
+              "text-base leading-[1.38] text-foreground transition-colors hover:bg-accent/50",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              open && "bg-accent/50"
+            )}
+          >
+            <span className="whitespace-nowrap">{soleLabel ?? "Asset Type"}</span>
+            {selected.length === 0 && <ChevronDown className="size-4 shrink-0" />}
+            {selected.length > 1 && (
+              <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-[var(--pp-bg-blue-high)] font-sans text-xs font-semibold leading-none text-[var(--pp-text-static-white)]">
+                {selected.length}
+              </span>
+            )}
+          </button>
+        </PopoverTrigger>
+
+        {soleLabel && (
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            aria-label={`Clear ${soleLabel} filter`}
+            title="Clear filter"
+            // -ml-2 pulls back the trigger's own 12px right padding to the 4px
+            // gap the design draws between the label and the cross.
+            className="-ml-2 flex shrink-0 items-center rounded-lg py-2 pr-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <span className="flex size-4 items-center justify-center rounded-full bg-[var(--pp-n700)] text-[var(--pp-text-static-white)]">
+              <X className="size-3" />
+            </span>
+          </button>
+        )}
+      </div>
+
+      <PopoverContent align="start" sideOffset={6} className="w-[248px] p-2">
+        <GlassMenu className="px-0">
+          <div className="flex w-full items-center gap-2 px-2">
+            {/* N400 on both the glyph and the placeholder, as the design draws
+                it. A fixed rung rather than --pp-icon-low: that token flips with
+                the theme, and this surface does not. */}
+            <SearchLg className="size-5 shrink-0 text-[var(--pp-n400)]" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search asset type"
+              aria-label="Search asset type"
+              className="min-w-0 flex-1 bg-transparent text-base leading-[1.38] text-[var(--pp-text-static-white)] outline-none placeholder:text-[var(--pp-n400)]"
+            />
+          </div>
+
+          <GlassMenuDivider />
+
+          {matches.length === 0 ? (
+            <p className="px-2 py-1 text-base leading-[1.38] text-[var(--pp-n400)]">
+              No asset type found
+            </p>
+          ) : (
+            <>
+              {chosen.map((type) => (
+                <AssetTypeOption
+                  key={type.value}
+                  label={type.label}
+                  checked
+                  onToggle={() => toggle(type.value)}
+                />
+              ))}
+              {/* Only a separator between two populated groups; on its own above
+                  or below nothing it would read as an empty section. */}
+              {chosen.length > 0 && rest.length > 0 && <GlassMenuDivider />}
+              {rest.map((type) => (
+                <AssetTypeOption
+                  key={type.value}
+                  label={type.label}
+                  checked={false}
+                  onToggle={() => toggle(type.value)}
+                />
+              ))}
+            </>
+          )}
+        </GlassMenu>
+      </PopoverContent>
+    </Popover>
   );
 }
 
