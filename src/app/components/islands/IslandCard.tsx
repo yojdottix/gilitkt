@@ -14,7 +14,7 @@ interface IslandCardProps {
   onOpen: () => void;
   /*
    * Every action is optional, and the kebab only appears for the ones supplied.
-   * A curated island is the same card with the same collage, but nobody except
+   * A harbor island is the same card with the same collage, but nobody except
    * the superuser may rename or delete one — so those two are simply left off
    * rather than passed and then disabled, which would advertise a control that
    * can never do anything.

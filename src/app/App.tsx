@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AssetDashboard } from "./components/AssetDashboard";
 import { ManageAsset } from "./components/ManageAsset";
 import { Analytics } from "./components/Analytics";
-import { CuratedIslandsManager } from "./components/CuratedIslandsManager";
+import { HarborManager } from "./components/HarborManager";
 import { AdminSettings } from "./components/AdminSettings";
 import { CsvViewer } from "./components/CsvViewer";
 import { HardResetDatabase } from "./components/HardResetDatabase";
@@ -26,7 +26,7 @@ type ViewType = "dashboard" | "superuser";
 const ADMIN_TAB_TITLES: Record<AdminTab, string> = {
   manage: "Manage Asset",
   analytics: "Analytics",
-  curated: "Curated Islands",
+  harbor: "Harbor",
   "csv-viewer": "Upload CSV",
   "manual-input": "Manual Input",
   backup: "Backup & Restore",
@@ -130,7 +130,7 @@ function SuperuserScreens({ activeTab, onTabChange, onNavigateBack }: SuperuserS
             <div className="min-h-px flex-1 overflow-y-auto">
               {activeTab === "manage" && <ManageAsset />}
               {activeTab === "analytics" && <Analytics />}
-              {activeTab === "curated" && <CuratedIslandsManager />}
+              {activeTab === "harbor" && <HarborManager />}
               {activeTab === "csv-viewer" && <CsvViewer />}
               {activeTab === "manual-input" && <ManualInput />}
               {activeTab === "backup" && <BackupRestore />}
