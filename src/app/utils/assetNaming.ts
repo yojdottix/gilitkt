@@ -5,7 +5,7 @@
  * asset is indistinguishable from an imported one. Two separate implementations of
  * "what should this be called" is how the two paths would silently drift.
  */
-import { generateAssetName, generateTypeFromFilename } from './csvParser';
+import { generateAssetName, generateTypeFromFilename, IMAGE_EXTENSION_RE } from './csvParser';
 
 /**
  * The types the app can actually display.
@@ -65,13 +65,30 @@ export function detectType(filename: string): string {
  * rows disagree about it constantly, and nobody intends `Halim` and `halim` to be
  * separate artwork.
  *
- * USE FOR LOOKUPS ONLY — never store it. `nama_file` keeps whatever casing it was
- * created with, because that is the string people copy, paste and search for.
- * Rewriting stored filenames to lowercase would silently rename thousands of
+ * The extension carries no meaning either, for the same reason. The library holds
+ * `tds_ic_purchase_list_blue.png` while the sheet you are pasting from, or your
+ * own typing, says `tds_ic_purchase_list_blue` — and every failure above repeated
+ * itself: the row graded as New, the link was never replaced, and the import
+ * created a second entry for artwork that was already there. Nobody means those
+ * two spellings as different assets; `asset_name` has always dropped the
+ * extension too, so the two rows were even displayed under one identical name.
+ *
+ * The cost of collapsing it is that `foo.png` and `foo.svg` become one asset.
+ * That is the intended trade: a Lightroom link points at one exported file, so a
+ * single asset carrying both spellings is a duplicate to be reconciled rather
+ * than two things to keep apart — and it is surfaced as such by the callers that
+ * build an index off this key.
+ *
+ * USE FOR LOOKUPS ONLY — never store it. `nama_file` keeps whatever casing and
+ * extension it was created with, because that is the string people copy, paste
+ * and search for. Rewriting stored filenames would silently rename thousands of
  * assets, which is a far bigger change than fixing a comparison.
  */
 export function assetKey(filename: string | undefined | null): string {
-  return (filename || '').trim().toLowerCase();
+  return (filename || '')
+    .trim()
+    .toLowerCase()
+    .replace(IMAGE_EXTENSION_RE, '');
 }
 
 /** Strip whitespace and a leading/trailing quote people paste in by accident. */

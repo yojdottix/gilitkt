@@ -205,9 +205,11 @@ export function ManualInput() {
       // silently overwrite the first, so flag it before saving rather than after.
       if ((seen.get(assetKey(name)) ?? 0) > 1) return "duplicate";
       if (!existingIndex) return "unknown";
-      // assetKey(), not the raw name: the library may hold `Halim.png` while you
-      // typed `halim.png`. Matching exactly graded that as New, so the link was
-      // never replaced and the import created a second row for one artwork.
+      // assetKey(), not the raw name: the library may hold
+      // `tds_ic_purchase_list_blue.png` while you typed a different case, or
+      // left the `.png` off entirely. Matching exactly graded those as New, so
+      // the link was never replaced and the import created a second row for one
+      // artwork.
       const key = assetKey(name);
       if (!existingIndex.has(key)) return "new";
       return existingIndex.get(key) !== url ? "replaced" : "unchanged";
@@ -233,7 +235,7 @@ export function ManualInput() {
     const namesPerUrl = new Map<string, Set<string>>();
     filledRows.forEach((r) => {
       const url = r.url_lightroom.trim();
-      const name = r.nama_file.trim().toLowerCase();
+      const name = assetKey(r.nama_file);
       if (!url || !name) return;
       const set = namesPerUrl.get(url) ?? new Set<string>();
       set.add(name);
@@ -261,13 +263,11 @@ export function ManualInput() {
   }, [filledRows, statusOf]);
 
   const savable = counts.new + counts.replaced;
-  const blocked = counts.duplicate > 0;
 
   const handleSave = async () => {
-    if (blocked) {
-      toast.error("Fix the duplicate filenames first");
-      return;
-    }
+    // Duplicate rows are silently skipped — the filter below already excludes
+    // them because they are not "new", "replaced", or "unknown". The alert
+    // above the button warns the user which rows will be left out.
     const payload = filledRows
       .filter((r) => {
         const s = statusOf(r);
@@ -303,7 +303,11 @@ export function ManualInput() {
     if (s === "unknown") return <span className="text-xs text-muted-foreground">?</span>;
     if (s === "duplicate")
       return (
-        <Badge variant="destructive" className="text-xs" title="Another row in this form has the same filename">
+        <Badge
+          variant="destructive"
+          className="text-xs"
+          title="Another row in this form has the same filename — this row will be skipped on save"
+        >
           Duplicate
         </Badge>
       );
@@ -340,8 +344,11 @@ export function ManualInput() {
           <CardDescription>
             Add a few assets without making a CSV. Type a filename — or paste the filename and
             link columns straight out of a spreadsheet — and the name and type fill themselves in,
-            both still editable. Saving uses the same import as Upload CSV, so duplicates and
-            changed links behave identically.
+            both still editable. Filenames are matched against the library ignoring capitalisation
+            and the file extension, so <code>tds_ic_purchase_list_blue</code> finds an existing{" "}
+            <code>tds_ic_purchase_list_blue.png</code> instead of adding a second copy of it.
+            Saving uses the same import as Upload CSV, so duplicates and changed links behave
+            identically.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -568,12 +575,15 @@ export function ManualInput() {
             </div>
           )}
 
-          {blocked && (
-            <Alert variant="destructive">
+          {counts.duplicate > 0 && (
+            <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-sm">
-                Two or more rows have the same <code>nama_file</code>. Saving them would create
-                duplicate entries in the library — remove or rename one before saving.
+                {counts.duplicate} row{counts.duplicate === 1 ? "" : "s"} share a{" "}
+                <code>nama_file</code> with another row in this form — capitalisation and the file
+                extension don't make it a different asset. {counts.duplicate === 1 ? "It" : "They"}{" "}
+                will be skipped on save. Remove or rename the duplicate{counts.duplicate === 1 ? "" : "s"}{" "}
+                if you want {counts.duplicate === 1 ? "it" : "them"} saved.
               </AlertDescription>
             </Alert>
           )}
@@ -597,7 +607,7 @@ export function ManualInput() {
             </Alert>
           )}
 
-          {counts.incomplete > 0 && !blocked && (
+          {counts.incomplete > 0 && (
             <p className="text-xs text-muted-foreground">
               {counts.incomplete} row{counts.incomplete === 1 ? " is" : "s are"} missing a filename or
               a link and will be skipped.
@@ -608,7 +618,7 @@ export function ManualInput() {
             className="w-full"
             size="lg"
             onClick={handleSave}
-            disabled={job.isActive || blocked || savable === 0}
+            disabled={job.isActive || savable === 0}
           >
             <Upload className="mr-2 h-4 w-4" />
             {savable === 0 ? "Nothing to save yet" : `Save ${savable} asset${savable === 1 ? "" : "s"}`}

@@ -15,6 +15,8 @@
  * own without needing a list of patterns to ignore.
  */
 
+import { assetKey } from './assetNaming';
+
 export interface PastedRow {
   nama_file: string;
   url_lightroom: string;
@@ -143,28 +145,34 @@ export function parsePastedAssets(raw: string): PasteParseResult {
     rows.push({ nama_file, url_lightroom: url, line });
   });
 
-  // Duplicate filenames — the same failure Manual Input already blocks on.
+  // Duplicate filenames — the same failure Manual Input already blocks on, and
+  // counted on the same assetKey(), so `foo` and `foo.png` in one paste are the
+  // one asset the form will grade them as rather than two rows that look fine
+  // here and then block on save.
   const nameCounts = new Map<string, number>();
   rows.forEach((r) => {
-    const key = r.nama_file.toLowerCase();
+    const key = assetKey(r.nama_file);
     nameCounts.set(key, (nameCounts.get(key) ?? 0) + 1);
   });
   const duplicateNames = rows
-    .filter((r) => (nameCounts.get(r.nama_file.toLowerCase()) ?? 0) > 1)
+    .filter((r) => (nameCounts.get(assetKey(r.nama_file)) ?? 0) > 1)
     .map((r) => r.nama_file)
     .filter((name, i, all) => all.indexOf(name) === i);
 
   // Duplicate links. Grouped by URL and only reported when the filenames differ,
   // because two identical rows are a duplicate-name problem, not this one.
-  const byUrl = new Map<string, Set<string>>();
+  // Keyed on assetKey() but carrying the filename as it was pasted, so the
+  // warning quotes what you can find in your sheet while still treating `foo`
+  // and `foo.png` as the one name they are.
+  const byUrl = new Map<string, Map<string, string>>();
   rows.forEach((r) => {
-    const set = byUrl.get(r.url_lightroom) ?? new Set<string>();
-    set.add(r.nama_file);
-    byUrl.set(r.url_lightroom, set);
+    const names = byUrl.get(r.url_lightroom) ?? new Map<string, string>();
+    if (!names.has(assetKey(r.nama_file))) names.set(assetKey(r.nama_file), r.nama_file);
+    byUrl.set(r.url_lightroom, names);
   });
   const duplicateUrls = [...byUrl.entries()]
     .filter(([, names]) => names.size > 1)
-    .map(([url, names]) => ({ url, filenames: [...names] }));
+    .map(([url, names]) => ({ url, filenames: [...names.values()] }));
 
   return { rows, incomplete, ignored, duplicateNames, duplicateUrls };
 }

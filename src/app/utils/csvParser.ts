@@ -8,10 +8,19 @@ export interface ParsedAsset {
   type: string;
 }
 
+/**
+ * The image extensions an asset filename may carry.
+ *
+ * Exported so `assetKey()` strips exactly the same set this does. Two separate
+ * ideas of "what counts as an extension" would mean a filename could be graded
+ * against the library one way and named another.
+ */
+export const IMAGE_EXTENSION_RE = /\.(png|jpg|jpeg|svg|webp|gif)$/i;
+
 // Generate asset name from filename (remove prefixes and extensions)
 export const generateAssetName = (filename: string): string => {
   return filename
-    .replace(/\.(png|jpg|jpeg|svg)$/i, '') // Remove file extension
+    .replace(IMAGE_EXTENSION_RE, '') // Remove file extension
     .replace(/^(tds_si_|tds_mi_|tds_ic_)/, '') // Remove prefixes
     .replace(/_/g, ' ') // Replace underscores with spaces
     .trim();

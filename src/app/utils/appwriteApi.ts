@@ -650,25 +650,26 @@ export async function getExistingAssetIndex(
     return { success: false, error: res.error || 'Failed to read existing assets' };
   }
   // Keyed by assetKey(), not by the raw filename, so `Halim.png` in the library
-  // matches `halim.png` in a CSV. See assetKey() for why casing carries no
-  // meaning here and why the STORED filename is left alone.
+  // matches `halim.png` — or a bare `Halim` — in a CSV. See assetKey() for why
+  // neither casing nor the extension carries meaning here, and why the STORED
+  // filename is left alone.
   const index = new Map<string, string>();
-  const caseDupes: string[] = [];
+  const variantDupes: string[] = [];
   res.data.forEach((a) => {
     if (!a.nama_file) return;
     const key = assetKey(a.nama_file);
-    // Two rows differing only by case means the library already holds a
-    // case-variant duplicate, created back when comparisons were exact. First
-    // wins deterministically rather than whichever happened to come last.
+    // Two rows differing only by case or extension means the library already
+    // holds a variant duplicate, created back when comparisons were exact.
+    // First wins deterministically rather than whichever happened to come last.
     if (index.has(key)) {
-      caseDupes.push(a.nama_file);
+      variantDupes.push(a.nama_file);
       return;
     }
     index.set(key, a.url_lightroom ?? '');
   });
-  if (caseDupes.length > 0) {
+  if (variantDupes.length > 0) {
     console.warn(
-      `\u26a0\ufe0f ${caseDupes.length} asset(s) differ from another only by capitalisation, so the library holds two rows for one artwork: ${caseDupes.slice(0, 10).join(', ')}${caseDupes.length > 10 ? '\u2026' : ''}`
+      `\u26a0\ufe0f ${variantDupes.length} asset(s) differ from another only by capitalisation or file extension, so the library holds two rows for one artwork: ${variantDupes.slice(0, 10).join(', ')}${variantDupes.length > 10 ? '\u2026' : ''}`
     );
   }
   onProgress?.(index.size);
@@ -735,8 +736,9 @@ export async function bulkCreateAssets(
     return { success: false, error: `Failed to check existing assets before import: ${before.error ?? 'unknown error'}` };
   }
   const existingAssets = before.data;
-  // Keyed by assetKey() so a re-upload spelled with different capitalisation
-  // updates the existing row instead of creating a second one.
+  // Keyed by assetKey() so a re-upload spelled with different capitalisation, or
+  // with the extension left off, updates the existing row instead of creating a
+  // second one.
   existingAssets.forEach((a) => {
     const key = assetKey(a.nama_file);
     if (!existingByFilename.has(key)) {
@@ -788,8 +790,9 @@ export async function bulkCreateAssets(
       onProgress?.(processed, total);
       continue;
     }
-    // Case-insensitive, so a CSV holding both `Halim.png` and `halim.png` is
-    // caught as the duplicate it is instead of importing the artwork twice.
+    // Blind to casing and the extension, so a CSV holding both `Halim.png` and
+    // `halim.png` — or both `Halim.png` and `Halim` — is caught as the duplicate
+    // it is instead of importing the artwork twice.
     const key = assetKey(filename);
     if (seenFilenames.has(key)) {
       errors.push(`Duplicate filename in batch: ${filename}`);
