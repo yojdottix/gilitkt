@@ -205,9 +205,11 @@ export function ManualInput() {
       // silently overwrite the first, so flag it before saving rather than after.
       if ((seen.get(assetKey(name)) ?? 0) > 1) return "duplicate";
       if (!existingIndex) return "unknown";
-      // assetKey(), not the raw name: the library may hold `Halim.png` while you
-      // typed `halim.png`. Matching exactly graded that as New, so the link was
-      // never replaced and the import created a second row for one artwork.
+      // assetKey(), not the raw name: the library may hold
+      // `tds_ic_purchase_list_blue.png` while you typed a different case, or
+      // left the `.png` off entirely. Matching exactly graded those as New, so
+      // the link was never replaced and the import created a second row for one
+      // artwork.
       const key = assetKey(name);
       if (!existingIndex.has(key)) return "new";
       return existingIndex.get(key) !== url ? "replaced" : "unchanged";
@@ -233,7 +235,7 @@ export function ManualInput() {
     const namesPerUrl = new Map<string, Set<string>>();
     filledRows.forEach((r) => {
       const url = r.url_lightroom.trim();
-      const name = r.nama_file.trim().toLowerCase();
+      const name = assetKey(r.nama_file);
       if (!url || !name) return;
       const set = namesPerUrl.get(url) ?? new Set<string>();
       set.add(name);
@@ -303,7 +305,11 @@ export function ManualInput() {
     if (s === "unknown") return <span className="text-xs text-muted-foreground">?</span>;
     if (s === "duplicate")
       return (
-        <Badge variant="destructive" className="text-xs" title="Another row in this form has the same filename">
+        <Badge
+          variant="destructive"
+          className="text-xs"
+          title="Another row in this form has the same filename — capitalisation and the file extension don't make it a different one"
+        >
           Duplicate
         </Badge>
       );
@@ -340,8 +346,11 @@ export function ManualInput() {
           <CardDescription>
             Add a few assets without making a CSV. Type a filename — or paste the filename and
             link columns straight out of a spreadsheet — and the name and type fill themselves in,
-            both still editable. Saving uses the same import as Upload CSV, so duplicates and
-            changed links behave identically.
+            both still editable. Filenames are matched against the library ignoring capitalisation
+            and the file extension, so <code>tds_ic_purchase_list_blue</code> finds an existing{" "}
+            <code>tds_ic_purchase_list_blue.png</code> instead of adding a second copy of it.
+            Saving uses the same import as Upload CSV, so duplicates and changed links behave
+            identically.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -572,8 +581,10 @@ export function ManualInput() {
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-sm">
-                Two or more rows have the same <code>nama_file</code>. Saving them would create
-                duplicate entries in the library — remove or rename one before saving.
+                Two or more rows have the same <code>nama_file</code>. Capitalisation and the file
+                extension don't make it a different asset, so <code>foo</code> and{" "}
+                <code>foo.png</code> count as one. Saving them would create duplicate entries in
+                the library — remove or rename one before saving.
               </AlertDescription>
             </Alert>
           )}

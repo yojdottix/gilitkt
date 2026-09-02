@@ -75,11 +75,13 @@ export function computeAnalytics(assets: Asset[]) {
 
   // Data-hygiene checks that matter for a library fed by CSV imports.
   const missingLink = assets.filter((a) => !a.url_lightroom?.trim()).length;
-  // Duplicates are counted case-insensitively, via assetKey().
+  // Duplicates are counted on assetKey(), so casing and the extension are
+  // ignored.
   //
-  // Comparing exactly meant `Halim.png` and `halim.png` were reported as two
-  // healthy assets — which is precisely the pair this panel exists to surface,
-  // since the import that created them thought they were unrelated too.
+  // Comparing exactly meant `Halim.png` and `halim.png` — or `Halim.png` and
+  // `Halim` — were reported as two healthy assets, which is precisely the pair
+  // this panel exists to surface, since the import that created them thought
+  // they were unrelated too.
   const seen = new Set<string>();
   const duplicates = new Set<string>();
   assets.forEach((a) => {

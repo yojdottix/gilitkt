@@ -114,8 +114,9 @@ custom_graphic.png,https://example.com/image4.jpg,Supergraphic`;
     const name = row?.nama_file?.trim();
     if (!name) return "unknown";
     // assetKey(), not the raw name — see assetNaming. Comparing exactly meant a
-    // re-upload spelled `Halim.png` against a stored `halim.png` was graded New,
-    // so its link was never replaced and the import duplicated the asset.
+    // re-upload spelled `Halim.png` against a stored `halim.png`, or a row
+    // written without its `.png`, was graded New — so its link was never
+    // replaced and the import duplicated the asset.
     const key = assetKey(name);
     if (!existingIndex.has(key)) return "new";
     const storedUrl = existingIndex.get(key) ?? "";
