@@ -263,13 +263,11 @@ export function ManualInput() {
   }, [filledRows, statusOf]);
 
   const savable = counts.new + counts.replaced;
-  const blocked = counts.duplicate > 0;
 
   const handleSave = async () => {
-    if (blocked) {
-      toast.error("Fix the duplicate filenames first");
-      return;
-    }
+    // Duplicate rows are silently skipped — the filter below already excludes
+    // them because they are not "new", "replaced", or "unknown". The alert
+    // above the button warns the user which rows will be left out.
     const payload = filledRows
       .filter((r) => {
         const s = statusOf(r);
@@ -308,7 +306,7 @@ export function ManualInput() {
         <Badge
           variant="destructive"
           className="text-xs"
-          title="Another row in this form has the same filename — capitalisation and the file extension don't make it a different one"
+          title="Another row in this form has the same filename — this row will be skipped on save"
         >
           Duplicate
         </Badge>
@@ -577,14 +575,15 @@ export function ManualInput() {
             </div>
           )}
 
-          {blocked && (
-            <Alert variant="destructive">
+          {counts.duplicate > 0 && (
+            <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-sm">
-                Two or more rows have the same <code>nama_file</code>. Capitalisation and the file
-                extension don't make it a different asset, so <code>foo</code> and{" "}
-                <code>foo.png</code> count as one. Saving them would create duplicate entries in
-                the library — remove or rename one before saving.
+                {counts.duplicate} row{counts.duplicate === 1 ? "" : "s"} share a{" "}
+                <code>nama_file</code> with another row in this form — capitalisation and the file
+                extension don't make it a different asset. {counts.duplicate === 1 ? "It" : "They"}{" "}
+                will be skipped on save. Remove or rename the duplicate{counts.duplicate === 1 ? "" : "s"}{" "}
+                if you want {counts.duplicate === 1 ? "it" : "them"} saved.
               </AlertDescription>
             </Alert>
           )}
@@ -608,7 +607,7 @@ export function ManualInput() {
             </Alert>
           )}
 
-          {counts.incomplete > 0 && !blocked && (
+          {counts.incomplete > 0 && (
             <p className="text-xs text-muted-foreground">
               {counts.incomplete} row{counts.incomplete === 1 ? " is" : "s are"} missing a filename or
               a link and will be skipped.
@@ -619,7 +618,7 @@ export function ManualInput() {
             className="w-full"
             size="lg"
             onClick={handleSave}
-            disabled={job.isActive || blocked || savable === 0}
+            disabled={job.isActive || savable === 0}
           >
             <Upload className="mr-2 h-4 w-4" />
             {savable === 0 ? "Nothing to save yet" : `Save ${savable} asset${savable === 1 ? "" : "s"}`}
