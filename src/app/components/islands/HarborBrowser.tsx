@@ -1,19 +1,19 @@
 import { useMemo } from "react";
 import { Loader2 } from "../icons";
 import { type Asset } from "../../utils/appwriteApi";
-import { type CuratedIsland } from "../../utils/curatedIslands";
+import { type HarborIsland } from "../../utils/harbor";
 import { IslandCard } from "./IslandCard";
 import { exportIslandAssets } from "./exportIsland";
 
-interface CuratedIslandBrowserProps {
+interface HarborBrowserProps {
   assets: Asset[];
-  islands: CuratedIsland[];
+  islands: HarborIsland[];
   loading: boolean;
-  onSelectIsland: (island: CuratedIsland) => void;
+  onSelectIsland: (island: HarborIsland) => void;
 }
 
 /**
- * The published curated islands, as everyone else sees them.
+ * The Harbor, as everyone but the superuser sees it.
  *
  * Deliberately not IslandManager with the buttons taken out. That component's
  * whole reason to exist is the create/rename/delete flow — three dialogs and the
@@ -21,12 +21,12 @@ interface CuratedIslandBrowserProps {
  * arrive read-only from Storage. What the two genuinely share is the card and the
  * export, and those are imported rather than reimplemented.
  */
-export function CuratedIslandBrowser({
+export function HarborBrowser({
   assets,
   islands,
   loading,
   onSelectIsland,
-}: CuratedIslandBrowserProps) {
+}: HarborBrowserProps) {
   // One lookup for the whole grid, as in IslandManager: resolving members per
   // card is a full scan of every asset per island, per render.
   const assetsByFile = useMemo(() => {
@@ -37,14 +37,14 @@ export function CuratedIslandBrowser({
 
   // Members are resolved against the library the client already has, so an asset
   // deleted since the collection was published just stops appearing.
-  const membersOf = (island: CuratedIsland) =>
+  const membersOf = (island: HarborIsland) =>
     island.asset_ids.map((id) => assetsByFile.get(id)).filter((a): a is Asset => Boolean(a));
 
   if (loading) {
     return (
       <div className="flex animate-in flex-col items-center justify-center gap-4 py-20 text-center fade-in duration-300">
         <Loader2 className="size-10 animate-spin text-[var(--pp-brand-blue)]" />
-        <p className="text-sm text-muted-foreground">Loading curated islands…</p>
+        <p className="text-sm text-muted-foreground">Loading the harbor…</p>
       </div>
     );
   }
@@ -58,7 +58,7 @@ export function CuratedIslandBrowser({
           aria-hidden="true"
           className="mb-6 size-[60px] object-contain"
         />
-        <h3 className="pp-h3 mb-2 text-[var(--pp-text-high)]">No curated islands yet</h3>
+        <h3 className="pp-h3 mb-2 text-[var(--pp-text-high)]">The harbor is empty</h3>
         <p className="max-w-[24rem] text-base leading-[1.38] text-[var(--pp-text-mid)]">
           These shelves are put together by the design team. Once they publish one, it shows up
           here for everyone.

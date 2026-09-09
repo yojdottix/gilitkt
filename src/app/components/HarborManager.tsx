@@ -17,31 +17,34 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
-import { AlertCircle, ArrowLeft, Check, Loader2, Plus, Trash2, X } from "./icons";
+import { AlertCircle, ArrowLeft, Check, Grid3X3, List, Loader2, Plus, Trash2, X } from "./icons";
 import { SearchLg } from "./icons/figma";
+import { cn } from "./ui/utils";
 import { useAssetData } from "./hooks/useAssetData";
 import { searchAssets, type Asset } from "../utils/appwriteApi";
-import {
-  fetchCuratedIslands,
-  publishCuratedIslands,
-  type CuratedIsland,
-} from "../utils/curatedIslands";
-
-/** How many search hits to draw at once. The library runs to thousands. */
-const RESULT_LIMIT = 40;
+import { fetchHarborIslands, publishHarborIslands, type HarborIsland } from "../utils/harbor";
 
 /**
- * Superuser screen for the curated islands.
+ * How many search hits to draw at once. The library runs to thousands, and
+ * every row carries a thumbnail, so this is a rendering budget rather than a
+ * meaningful limit — the search box is how you get to the rest.
+ */
+const RESULT_LIMIT = 100;
+
+type PickerLayout = "list" | "grid";
+
+/**
+ * Superuser screen for the Harbor.
  *
  * Edits are held locally and written in one go, rather than publishing on every
  * keystroke: a publish replaces the whole file, and assembling a collection is
  * dozens of small changes in a row. So the screen carries an explicit
  * Publish — which also means a half-built shelf is never visible to anyone.
  */
-export function CuratedIslandsManager() {
+export function HarborManager() {
   const { assets, loading: assetsLoading } = useAssetData();
 
-  const [islands, setIslands] = useState<CuratedIsland[]>([]);
+  const [islands, setIslands] = useState<HarborIsland[]>([]);
   const [loading, setLoading] = useState(true);
   const [dirty, setDirty] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -49,10 +52,11 @@ export function CuratedIslandsManager() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [toDelete, setToDelete] = useState<CuratedIsland | null>(null);
+  const [layout, setLayout] = useState<PickerLayout>("list");
+  const [toDelete, setToDelete] = useState<HarborIsland | null>(null);
 
   useEffect(() => {
-    fetchCuratedIslands()
+    fetchHarborIslands()
       .then(setIslands)
       .finally(() => setLoading(false));
   }, []);
@@ -65,24 +69,24 @@ export function CuratedIslandsManager() {
     return map;
   }, [assets]);
 
-  const apply = (next: CuratedIsland[]) => {
+  const apply = (next: HarborIsland[] | ((prev: HarborIsland[]) => HarborIsland[])) => {
     setIslands(next);
     setDirty(true);
   };
 
-  const patchEditing = (patch: Partial<CuratedIsland>) => {
-    if (!editing) return;
-    apply(
-      islands.map((i) =>
-        i.id === editing.id ? { ...i, ...patch, updated_at: new Date().toISOString() } : i
+  const patchEditing = (patch: Partial<HarborIsland>) => {
+    if (!editingId) return;
+    apply((prev) =>
+      prev.map((i) =>
+        i.id === editingId ? { ...i, ...patch, updated_at: new Date().toISOString() } : i
       )
     );
   };
 
   const createIsland = () => {
     const now = new Date().toISOString();
-    const island: CuratedIsland = {
-      id: `curated-${Date.now()}`,
+    const island: HarborIsland = {
+      id: `harbor-${Date.now()}`,
       name: "Untitled collection",
       asset_ids: [],
       created_at: now,
@@ -100,13 +104,27 @@ export function CuratedIslandsManager() {
     setToDelete(null);
   };
 
+  /*
+   * Derived from the island as it stands at the moment the click lands, rather
+   * than from the render that drew the row: adding twenty assets is twenty
+   * clicks in quick succession, and reading the closure would drop any that
+   * land inside the same render.
+   */
   const toggleMember = (nama_file: string) => {
-    if (!editing) return;
-    patchEditing({
-      asset_ids: editing.asset_ids.includes(nama_file)
-        ? editing.asset_ids.filter((id) => id !== nama_file)
-        : [...editing.asset_ids, nama_file],
-    });
+    if (!editingId) return;
+    apply((prev) =>
+      prev.map((i) =>
+        i.id === editingId
+          ? {
+              ...i,
+              asset_ids: i.asset_ids.includes(nama_file)
+                ? i.asset_ids.filter((id) => id !== nama_file)
+                : [...i.asset_ids, nama_file],
+              updated_at: new Date().toISOString(),
+            }
+          : i
+      )
+    );
   };
 
   const publish = async () => {
@@ -120,15 +138,15 @@ export function CuratedIslandsManager() {
 
     setPublishing(true);
     setError(null);
-    const result = await publishCuratedIslands(islands);
+    const result = await publishHarborIslands(islands);
     setPublishing(false);
 
     if (!result.success) {
-      setError(result.error || "Could not publish the curated islands.");
+      setError(result.error || "Could not publish the harbor.");
       return;
     }
     setDirty(false);
-    toast.success("Curated islands published", {
+    toast.success("Harbor published", {
       description: `${islands.length} ${islands.length === 1 ? "collection is" : "collections are"} now visible to everyone.`,
     });
   };
@@ -149,7 +167,7 @@ export function CuratedIslandsManager() {
     return (
       <div className="flex items-center justify-center gap-3 py-20 text-muted-foreground">
         <Loader2 className="size-5 animate-spin" />
-        Loading published collections…
+        Loading the published harbor…
       </div>
     );
   }
@@ -188,14 +206,14 @@ export function CuratedIslandsManager() {
             <CardHeader>
               <CardTitle>Collection details</CardTitle>
               <CardDescription>
-                The name is what everyone sees in the Curated menu.
+                The name is what everyone sees in the Harbor menu.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="curated-name">Name</Label>
+                <Label htmlFor="harbor-name">Name</Label>
                 <Input
-                  id="curated-name"
+                  id="harbor-name"
                   value={editing.name}
                   onChange={(e) => patchEditing({ name: e.target.value })}
                   placeholder="Product icons, Payment illustrations…"
@@ -203,9 +221,9 @@ export function CuratedIslandsManager() {
                 />
               </div>
               <div>
-                <Label htmlFor="curated-description">Description (optional)</Label>
+                <Label htmlFor="harbor-description">Description (optional)</Label>
                 <Textarea
-                  id="curated-description"
+                  id="harbor-description"
                   value={editing.description || ""}
                   onChange={(e) => patchEditing({ description: e.target.value || undefined })}
                   placeholder="What belongs on this shelf?"
@@ -253,15 +271,41 @@ export function CuratedIslandsManager() {
                 </p>
               )}
 
-              <div className="flex h-[42px] w-full items-center gap-2 rounded-lg border border-border bg-[var(--gili-search-surface)] px-3">
-                <SearchLg className="size-5 shrink-0 text-[var(--pp-icon-low)]" />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search assets to add…"
-                  aria-label="Search assets to add"
-                  className="min-w-0 flex-1 bg-transparent text-base leading-[1.38] text-foreground outline-none placeholder:text-[var(--pp-text-disabled)]"
-                />
+              <div className="flex items-center gap-2">
+                <div className="flex h-[42px] min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-[var(--gili-search-surface)] px-3">
+                  <SearchLg className="size-5 shrink-0 text-[var(--pp-icon-low)]" />
+                  <input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search assets to add…"
+                    aria-label="Search assets to add"
+                    className="min-w-0 flex-1 bg-transparent text-base leading-[1.38] text-foreground outline-none placeholder:text-[var(--pp-text-disabled)]"
+                  />
+                </div>
+
+                {/* Two ways to look at the same hits: the list names every file,
+                    which is how you tell near-identical variants apart, and the
+                    grid shows enough artwork at once to pick by eye. */}
+                <div
+                  role="group"
+                  aria-label="Result layout"
+                  className="flex h-[42px] shrink-0 items-center gap-1 rounded-lg border border-border p-1"
+                >
+                  <LayoutButton
+                    label="List"
+                    active={layout === "list"}
+                    onClick={() => setLayout("list")}
+                  >
+                    <List className="size-4" />
+                  </LayoutButton>
+                  <LayoutButton
+                    label="Grid"
+                    active={layout === "grid"}
+                    onClick={() => setLayout("grid")}
+                  >
+                    <Grid3X3 className="size-4" />
+                  </LayoutButton>
+                </div>
               </div>
 
               {assetsLoading ? (
@@ -269,7 +313,11 @@ export function CuratedIslandsManager() {
                   <Loader2 className="size-4 animate-spin" />
                   Loading the library…
                 </div>
-              ) : (
+              ) : results.length === 0 ? (
+                <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
+                  Nothing matches "{query}".
+                </p>
+              ) : layout === "list" ? (
                 <div className="divide-y divide-border rounded-lg border border-border">
                   {results.map((asset) => {
                     const inCollection = editing.asset_ids.includes(asset.nama_file);
@@ -299,7 +347,7 @@ export function CuratedIslandsManager() {
                           aria-hidden="true"
                           className={
                             inCollection
-                              ? "text-[var(--pp-icon-success)]"
+                              ? "text-[var(--pp-icon-positive)]"
                               : "text-[var(--pp-icon-low)]"
                           }
                         >
@@ -308,11 +356,58 @@ export function CuratedIslandsManager() {
                       </button>
                     );
                   })}
-                  {results.length === 0 && (
-                    <p className="p-4 text-sm text-muted-foreground">
-                      Nothing matches "{query}".
-                    </p>
-                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  {results.map((asset) => {
+                    const inCollection = editing.asset_ids.includes(asset.nama_file);
+                    return (
+                      <button
+                        key={asset.id}
+                        type="button"
+                        onClick={() => toggleMember(asset.nama_file)}
+                        // The border carries the selected state here: a corner
+                        // tick alone is easy to miss against busy artwork.
+                        className={cn(
+                          "group flex flex-col gap-2 rounded-lg border p-2 text-left transition-colors",
+                          inCollection
+                            ? "border-[var(--pp-brand-blue)] bg-[var(--pp-chip-selected-bg)]"
+                            : "border-border hover:bg-accent/50"
+                        )}
+                      >
+                        <span className="relative flex aspect-square items-center justify-center rounded bg-[var(--pp-bg-sunken)] p-2">
+                          <ImageWithFallback
+                            src={asset.url_lightroom}
+                            alt=""
+                            className="size-full object-contain"
+                          />
+                          <span
+                            aria-hidden="true"
+                            className={cn(
+                              "absolute right-1 top-1 flex size-6 items-center justify-center rounded-full",
+                              inCollection
+                                ? "bg-[var(--pp-brand-blue)] text-white"
+                                : "bg-[var(--pp-bg-base)] text-[var(--pp-icon-low)]"
+                            )}
+                          >
+                            {inCollection ? (
+                              <Check className="size-4" />
+                            ) : (
+                              <Plus className="size-4" />
+                            )}
+                          </span>
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm text-foreground">
+                            {asset.asset_name || asset.nama_file}
+                          </span>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {asset.nama_file}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 
@@ -329,14 +424,14 @@ export function CuratedIslandsManager() {
           <CardHeader>
             <CardTitle>Collections</CardTitle>
             <CardDescription>
-              Curated islands are read-only shelves everyone can browse. Someone who doesn't know
-              what an asset is called can find it here instead of guessing at the search box.
+              The Harbor is a set of read-only shelves everyone can browse. Someone who doesn't
+              know what an asset is called can find it here instead of guessing at the search box.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {islands.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                Nothing curated yet.
+                Nothing moored yet.
               </p>
             ) : (
               islands.map((island) => (
@@ -399,5 +494,35 @@ export function CuratedIslandsManager() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+function LayoutButton({
+  label,
+  active,
+  onClick,
+  children,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      title={`${label} view`}
+      aria-label={`${label} view`}
+      className={cn(
+        "flex size-8 items-center justify-center rounded-md transition-colors",
+        active
+          ? "bg-[var(--pp-chip-selected-bg)] text-[var(--pp-chip-selected-fg)]"
+          : "text-[var(--pp-icon-low)] hover:bg-accent"
+      )}
+    >
+      {children}
+    </button>
   );
 }
