@@ -6,4 +6,4 @@
  * to be worth calling out. Keep this in sync with the version in package.json
  * and the delivered zip filename.
  */
-export const APP_VERSION = "2.0.1";
+export const APP_VERSION = "2.0.2";
